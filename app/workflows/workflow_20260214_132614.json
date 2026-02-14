@@ -1,0 +1,15 @@
+{
+    "name": "Stripe Payment Alert",
+    "trigger": {
+        "app": "Stripe",
+        "event": "payment_succeeded"
+    },
+    "actions": [
+        {
+            "app": "Slack",
+            "event": "send_message",
+            "channel": "#payments",
+            "message": "\ud83d\udcb0 New Stripe payment received!"
+        }
+    ]
+}

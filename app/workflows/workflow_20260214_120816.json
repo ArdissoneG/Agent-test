@@ -1,0 +1,24 @@
+{
+    "name": "Form \u2192 Google Sheets",
+    "trigger": {
+        "app": "Google Forms",
+        "event": "form_submitted"
+    },
+    "actions": [
+        {
+            "app": "Google Sheets",
+            "event": "append_row",
+            "fields": [
+                "name",
+                "email",
+                "message"
+            ]
+        },
+        {
+            "app": "Slack",
+            "event": "send_message",
+            "channel": "#notifications",
+            "message": "\ud83d\udce9 New form submission received!"
+        }
+    ]
+}
