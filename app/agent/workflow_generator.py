@@ -10,61 +10,59 @@ class WorkflowGenerator:
         Generates workflows based on parsed intent.
         Current support:
         - Google Forms → Google Sheets (+ optional Slack)
+        - Stripe Payment → Slack
         """
 
         intent = self.parser.parse(user_request)
 
-        # ---- Workflow 1: Google Forms ----
-        if intent["trigger"] == "google_forms":
+        actions = []
 
-            actions = []
+        # ----------------------------
+        # Google Sheets Action
+        # ----------------------------
+        if "google_sheets" in intent["actions"]:
 
-            if "google_sheets" in intent["actions"]:
-                actions.append({
-                    "app": "Google Sheets",
-                    "event": "append_row",
-                    "fields": ["name", "email", "message"]
-                })
+            data = intent.get("data", {})
 
-            if "slack" in intent["actions"]:
-                actions.append({
-                    "app": "Slack",
-                    "event": "send_message",
-                    "channel": "#notifications",
-                    "message": "📩 New form submission received!"
-                })
+            actions.append({
+                "app": "Google Sheets",
+                "event": "append_row",
+                "fields": ["name", "email", "message"],
+                "values": [
+                    data.get("name", "unknown"),
+                    data.get("email", "unknown"),
+                    data.get("message", "empty")
+                ]
+            })
 
-            return {
-                "name": "Google Forms Automation",
-                "trigger": {
-                    "app": "Google Forms",
-                    "event": "form_submitted"
-                },
-                "actions": actions
-            }
-        # ---- Workflow 2: Stripe Payment ----
-        if intent["trigger"] == "stripe_payment":
+        # ----------------------------
+        # Slack Action
+        # ----------------------------
+        if "slack" in intent["actions"]:
 
-            actions = []
+            channel = "#notifications"
 
-            if "slack" in intent["actions"]:
-                actions.append({
-                    "app": "Slack",
-                    "event": "send_message",
-                    "channel": "#payments",
-                    "message": "💰 New Stripe payment received!"
-                })
+            if intent["trigger"] == "stripe_payment":
+                msg = "💰 New Stripe payment received!"
+                channel = "#payments"
+            else:
+                msg = "📩 New workflow event triggered!"
 
-            return {
-                "name": "Stripe Payment Alert",
-                "trigger": {
-                    "app": "Stripe",
-                    "event": "payment_succeeded"
-                },
-                "actions": actions
-            }
-        # ---- Fallback ----
+            actions.append({
+                "app": "Slack",
+                "event": "send_message",
+                "channel": channel,
+                "message": msg
+            })
+
+        # ----------------------------
+        # Workflow Output
+        # ----------------------------
         return {
-            "error": "Workflow not supported yet",
-            "supported": ["Google Forms → Sheets (+Slack)", "Stripe Payment → Slack"]
+            "name": f"{intent['trigger']} automation",
+            "trigger": {
+                "app": intent["trigger"],
+                "event": "triggered"
+            },
+            "actions": actions
         }
