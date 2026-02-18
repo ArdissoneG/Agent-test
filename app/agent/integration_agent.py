@@ -4,6 +4,9 @@ from app.storage.workflow_store import WorkflowStore
 from app.integrations.slack import SlackIntegration
 from app.integrations.mock_sheets import MockGoogleSheetsIntegration
 
+from app.tools.sheets_tool import SheetsTool
+from app.tools.slack_tool import SlackTool
+
 from app.utils.config import SLACK_WEBHOOK_URL
 
 
@@ -12,7 +15,11 @@ class IntegrationAgent:
         self.generator = WorkflowGenerator()
         self.store = WorkflowStore()
 
-        # Mock Sheets integration (local CSV)
+        # ----------------------------
+        # Integrations (clients)
+        # ----------------------------
+
+        # Mock Google Sheets (local CSV)
         self.sheets = MockGoogleSheetsIntegration()
 
         # Slack integration (optional)
@@ -20,6 +27,19 @@ class IntegrationAgent:
             self.slack = SlackIntegration()
         else:
             self.slack = None
+
+        # ----------------------------
+        # Tools registry (NEW)
+        # ----------------------------
+
+        self.tools = {}
+
+        # Register Sheets tool
+        self.tools["Google Sheets"] = SheetsTool(self.sheets)
+
+        # Register Slack tool only if available
+        if self.slack:
+            self.tools["Slack"] = SlackTool(self.slack)
 
     def create_workflow(self, user_request: str) -> dict:
         """
@@ -32,25 +52,22 @@ class IntegrationAgent:
         # Save workflow
         self.store.save(workflow)
 
-        # Execute actions dynamically
+        # Execute actions
         self.execute_workflow(workflow)
 
         return workflow
 
     def execute_workflow(self, workflow: dict):
         """
-        Executes each action in the workflow.
+        Executes each action using the correct tool.
         """
 
         for action in workflow.get("actions", []):
 
-            # Google Sheets (mock)
-            if action["app"] == "Google Sheets":
-                self.sheets.append_row(action["values"])
+            tool = self.tools.get(action["app"])
 
-            # Slack
-            if action["app"] == "Slack" and self.slack:
-                self.slack.send_message(
-                    channel=action["channel"],
-                    message=action["message"]
-                )
+            if tool:
+                tool.run(action)
+            else:
+                print(f"⚠️ No tool registered for: {action['app']}")
+

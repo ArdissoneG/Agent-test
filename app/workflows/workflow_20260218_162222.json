@@ -1,0 +1,29 @@
+{
+    "name": "manual automation",
+    "trigger": {
+        "app": "manual",
+        "event": "triggered"
+    },
+    "actions": [
+        {
+            "app": "Google Sheets",
+            "event": "append_row",
+            "fields": [
+                "name",
+                "email",
+                "message"
+            ],
+            "values": [
+                "unknown",
+                "unknown",
+                "empty"
+            ]
+        },
+        {
+            "app": "Slack",
+            "event": "send_message",
+            "channel": "#notifications",
+            "message": "\ud83d\udce9 New workflow event triggered!"
+        }
+    ]
+}

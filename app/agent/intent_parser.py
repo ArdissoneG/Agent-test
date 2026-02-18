@@ -50,7 +50,16 @@ class IntentParser:
         match = re.search(r"add to sheet:\s*(.*)", text, re.IGNORECASE)
 
         if match:
-            parts = match.group(1).split(",")
+            raw = match.group(1)
+            # Allow separators for extra commands
+            # Examples:
+            # Add to sheet: name,email,msg ; notify slack
+            # Add to sheet: name,email,msg | notify slack
+            # Add to sheet: name,email,msg / notify slack
+            for sep in ["|", ";", "/", "-"]:
+                if sep in raw:
+                    raw = raw.split(sep)[0]
+            parts = raw.split(",")
 
             if len(parts) >= 3:
                 intent["data"] = {
