@@ -1,19 +1,26 @@
+import inspect
+import pkgutil
+import importlib
+
+import app.tools as tools_package
+from app.tools.base import Tool
+
 from app.agent.workflow_generator import WorkflowGenerator
 from app.storage.workflow_store import WorkflowStore
 
 from app.integrations.slack import SlackIntegration
 from app.integrations.mock_sheets import MockGoogleSheetsIntegration
 
-from app.tools.sheets_tool import SheetsTool
-from app.tools.slack_tool import SlackTool
-
 from app.utils.config import SLACK_WEBHOOK_URL
+
+from app.agent.decision_maker import DecisionMaker
 
 
 class IntegrationAgent:
     def __init__(self):
         self.generator = WorkflowGenerator()
         self.store = WorkflowStore()
+        self.decision_maker = DecisionMaker()
 
         # ----------------------------
         # Integrations (clients)
@@ -29,30 +36,46 @@ class IntegrationAgent:
             self.slack = None
 
         # ----------------------------
-        # Tools registry (NEW)
+        # Tool Auto-Discovery
         # ----------------------------
 
         self.tools = {}
 
-        # Register Sheets tool
-        self.tools["Google Sheets"] = SheetsTool(self.sheets)
+        # Dynamically import all modules inside app.tools
+        for _, module_name, _ in pkgutil.iter_modules(tools_package.__path__):
+            module = importlib.import_module(f"app.tools.{module_name}")
 
-        # Register Slack tool only if available
-        if self.slack:
-            self.tools["Slack"] = SlackTool(self.slack)
+            for _, cls in inspect.getmembers(module, inspect.isclass):
+
+                if issubclass(cls, Tool) and cls is not Tool:
+
+                    # Dependency injection based on tool name
+                    if cls.name == "Google Sheets":
+                        instance = cls(self.sheets)
+
+                    elif cls.name == "Slack" and self.slack:
+                        instance = cls(self.slack)
+
+                    else:
+                        continue
+
+                    self.tools[cls.name] = instance
 
     def create_workflow(self, user_request: str) -> dict:
         """
-        Generates and saves a workflow JSON.
-        Then executes supported actions.
+        Classifies user intent.
+        Only generates workflow if automation intent detected.
         """
+
+        decision = self.decision_maker.classify(user_request)
+
+        if decision != "automation":
+            print("No automation detected. Ignoring input.")
+            return {"status": "ignored"}
 
         workflow = self.generator.generate(user_request)
 
-        # Save workflow
         self.store.save(workflow)
-
-        # Execute actions
         self.execute_workflow(workflow)
 
         return workflow
@@ -70,4 +93,5 @@ class IntegrationAgent:
                 tool.run(action)
             else:
                 print(f"⚠️ No tool registered for: {action['app']}")
+
 

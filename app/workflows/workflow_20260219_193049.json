@@ -1,0 +1,15 @@
+{
+    "name": "manual automation",
+    "trigger": {
+        "app": "manual",
+        "event": "triggered"
+    },
+    "actions": [
+        {
+            "app": "Slack",
+            "event": "send_message",
+            "channel": "#notifications",
+            "message": "\ud83d\udce9 New workflow event triggered!"
+        }
+    ]
+}

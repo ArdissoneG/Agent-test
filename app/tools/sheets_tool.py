@@ -1,4 +1,6 @@
-class SheetsTool:
+from app.tools.base import Tool
+
+class SheetsTool(Tool):
     name = "Google Sheets"
 
     def __init__(self, sheets_client):

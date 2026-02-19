@@ -1,4 +1,6 @@
-class SlackTool:
+from app.tools.base import Tool
+
+class SlackTool(Tool):
     name = "Slack"
 
     def __init__(self, slack_client):

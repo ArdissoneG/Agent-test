@@ -1,0 +1,8 @@
+{
+    "name": "manual automation",
+    "trigger": {
+        "app": "manual",
+        "event": "triggered"
+    },
+    "actions": []
+}
