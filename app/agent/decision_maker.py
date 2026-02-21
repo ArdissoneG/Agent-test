@@ -1,10 +1,10 @@
-import openai
-from app.utils.config import OPENAI_API_KEY
+import requests
 
 
 class DecisionMaker:
-    def __init__(self):
-        openai.api_key = OPENAI_API_KEY
+    def __init__(self, model: str = "phi3:mini"):
+        self.model = model
+        self.url = "http://localhost:11434/api/generate"
 
     def classify(self, user_input: str) -> str:
         """
@@ -26,12 +26,23 @@ User input:
 {user_input}
 """
 
-        response = openai.ChatCompletion.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0
+        response = requests.post(
+            self.url,
+            json={
+                "model": self.model,
+                "prompt": prompt,
+                "stream": False
+            },
+            timeout=60
         )
 
-        result = response["choices"][0]["message"]["content"].strip().lower()
+        if response.status_code != 200:
+            print("Ollama error:", response.text)
+            return "ignore"
 
-        return result
+        result = response.json()["response"].strip().lower()
+
+        if "automation" in result:
+            return "automation"
+
+        return "ignore"
